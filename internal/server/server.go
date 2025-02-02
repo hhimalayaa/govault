@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"preparation/go-projects/govault/internal/response"
 	"preparation/go-projects/govault/internal/storage"
 )
 
@@ -39,19 +40,26 @@ func GetKey(w http.ResponseWriter, r *http.Request) {
 
 	value, ok := storage.Get(key)
 	if !ok {
-		http.Error(w, "Key not found", http.StatusNotFound)
+		response.NotFound(w, "Key not found")
 	}
 
 	w.Write([]byte(value))
 }
 
-func DeleteKey(w http.ResponseWriter, r *http.Request) bool {
+func DeleteKey(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Invalid request method", http.StatusBadRequest)
+		response.JSONResponse(w, http.StatusBadRequest, "Invalid request method")
 	}
+
 	key := r.URL.Query().Get("key")
 	if key == "" {
-		http.Error(w, "Missing key", http.StatusBadRequest)
+		response.JSONResponse(w, http.StatusBadRequest, "Missing key")
 	}
-	return storage.Delete(key)
+
+	ok := storage.Delete(key)
+	if !ok {
+		response.NotFound(w, "Key not found")
+	}
+
+	response.NoContent(w)
 }
