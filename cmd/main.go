@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"preparation/go-projects/govault/internal/server"
+	"preparation/go-projects/govault/internal/handler"
 )
 
 func main() {
@@ -19,9 +19,11 @@ func main() {
 	ctx := context.Background()
 	slog.Log(ctx, slog.LevelInfo, "GoVault is running on", "port", portNo)
 
-	http.HandleFunc("/set", server.SetKey)
-	http.HandleFunc("/get", server.GetKey)
-	http.HandleFunc("/delete", server.DeleteKey)
+	http.HandleFunc("/set", handler.SetKey)
+	http.HandleFunc("/get", handler.GetKey)
+	http.HandleFunc("/delete", handler.DeleteKey)
+	http.HandleFunc("/set_with_ttl", handler.SetKeyTTL)
+	http.HandleFunc("/select_db", handler.SelectDB)
 
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil {
