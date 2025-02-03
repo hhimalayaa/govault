@@ -2,11 +2,15 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"preparation/go-projects/govault/internal/response"
 	"preparation/go-projects/govault/internal/storage"
 )
+
+var db = storage.NewMultiDB()
 
 func SetKey(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -24,7 +28,7 @@ func SetKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing key or value", http.StatusBadRequest)
 	}
 
-	storage.Set(key, value)
+	db.ActiveDB().Set(key, value)
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -38,7 +42,7 @@ func GetKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing key", http.StatusBadRequest)
 	}
 
-	value, ok := storage.Get(key)
+	value, ok := db.ActiveDB().Get(key)
 	if !ok {
 		response.NotFound(w, "Key not found")
 	}
@@ -56,10 +60,32 @@ func DeleteKey(w http.ResponseWriter, r *http.Request) {
 		response.JSONResponse(w, http.StatusBadRequest, "Missing key")
 	}
 
-	ok := storage.Delete(key)
+	ok := db.ActiveDB().Delete(key)
 	if !ok {
 		response.NotFound(w, "Key not found")
 	}
 
 	response.NoContent(w)
+}
+
+func SetKeyTTL(w http.ResponseWriter, r *http.Request) {
+	var data map[string]interface{}
+	json.NewDecoder(r.Body).Decode(&data)
+
+	key, value := data["key"].(string), data["value"].(string)
+	ttl := time.Duration(data["ttl"].(int)) * time.Second
+
+	db.ActiveDB().SetWithTTL(key, value, ttl)
+	slog.Info("Key set with TTL", "key", key, "ttl", ttl)
+	w.WriteHeader(http.StatusCreated)
+}
+
+func SelectDB(w http.ResponseWriter, r *http.Request) {
+	var data map[string]int
+	json.NewDecoder(r.Body).Decode(&data)
+
+	dbNum := data["db"]
+	db.SelectDB(dbNum)
+	slog.Info("Database switched", "db", dbNum)
+	w.WriteHeader(http.StatusOK)
 }
