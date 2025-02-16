@@ -9,15 +9,24 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
+
+	"preparation/go-projects/govault/config"
 	"preparation/go-projects/govault/internal/handler"
 )
 
 func main() {
-	portNo := "8081"
-	httpServer := &http.Server{Addr: ":" + portNo}
+	var config config.Config
+
+	err := envconfig.Process("", &config)
+	if err != nil {
+		slog.Error("env file is missing")
+	}
+
+	httpServer := &http.Server{Addr: ":" + config.APP.PORT}
 
 	ctx := context.Background()
-	slog.Log(ctx, slog.LevelInfo, "GoVault is running on", "port", portNo)
+	slog.Log(ctx, slog.LevelInfo, "GoVault is running on", "port", config.APP.PORT)
 
 	http.HandleFunc("/set", handler.SetKey)
 	http.HandleFunc("/get", handler.GetKey)
@@ -42,4 +51,5 @@ func main() {
 	} else {
 		slog.Info("Server shut down gracefully")
 	}
+
 }
